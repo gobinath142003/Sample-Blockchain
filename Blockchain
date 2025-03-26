@@ -1,0 +1,117 @@
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+class Block {
+    private int index;
+    private long timestamp;
+    private String data;
+    private String previousHash;
+    private String hash;
+
+    public Block(int index, String data, String previousHash) {
+        this.index = index;
+        this.timestamp = new Date().getTime();
+        this.data = data;
+        this.previousHash = previousHash;
+        this.hash = calculateHash();
+    }
+
+    public String calculateHash() {
+        String input = index + timestamp + data + previousHash;
+        return applySHA256(input);
+    }
+
+    public static String applySHA256(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(input.getBytes("UTF-8"));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hashBytes) {
+                hexString.append(String.format("%02x", b));
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public int getIndex() { return index; }
+    public long getTimestamp() { return timestamp; }
+    public String getData() { return data; }
+    public String getPreviousHash() { return previousHash; }
+    public String getHash() { return hash; }
+
+    public void setData(String newData) {
+        this.data = newData;
+        this.hash = calculateHash();
+    }
+}
+
+class Blockchain {
+    private List<Block> chain;
+
+    public Blockchain() {
+        chain = new ArrayList<>();
+        chain.add(createGenesisBlock());
+    }
+
+    private Block createGenesisBlock() {
+        return new Block(0, "Genesis Block", "0");
+    }
+
+    public Block getLatestBlock() {
+        return chain.get(chain.size() - 1);
+    }
+
+    public void addBlock(String data) {
+        Block previousBlock = getLatestBlock();
+        Block newBlock = new Block(previousBlock.getIndex() + 1, data, previousBlock.getHash());
+        chain.add(newBlock);
+    }
+
+    public boolean isChainValid() {
+        for (int i = 1; i < chain.size(); i++) {
+            Block currentBlock = chain.get(i);
+            Block previousBlock = chain.get(i - 1);
+
+            if (!currentBlock.getHash().equals(currentBlock.calculateHash())) {
+                return false;
+            }
+            if (!currentBlock.getPreviousHash().equals(previousBlock.getHash())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void printBlockchain() {
+        for (Block block : chain) {
+            System.out.println("Page Number: " + block.getIndex());
+            System.out.println("Timestamp: " + block.getTimestamp());
+            System.out.println("Content: " + block.getData());
+            System.out.println("Previous Page Hash: " + block.getPreviousHash());
+            System.out.println("Security Code (Hash): " + block.getHash());
+            System.out.println("------------------------");
+        }
+    }
+}
+
+public class BlockchainDemo {
+    public static void main(String[] args) {
+        Blockchain blockchain = new Blockchain();
+
+        blockchain.addBlock("Transaction 1: Kumar -> Akash");
+        blockchain.addBlock("Transaction 2: Akash -> Birla");
+        blockchain.addBlock("Transaction 3: Birla -> Charlie");
+        System.out.println("Blockchain before tampering:");
+        blockchain.printBlockchain();
+        System.out.println("Is blockchain valid? " + blockchain.isChainValid());
+        System.out.println("\nTrying to tamper with the blockchain...");
+        blockchain.getLatestBlock().setData("Tampered Transaction");
+        System.out.println("Blockchain after tampering:");
+        blockchain.printBlockchain();
+        System.out.println("Is blockchain valid after tampering? " + blockchain.isChainValid());
+    }
+}
